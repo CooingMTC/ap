@@ -7,19 +7,11 @@ from faker import Faker
 
 fake = Faker("pt_BR")
 
-# =========================================================
-# CONFIGURAÇÕES
-# =========================================================
-
 NUM_USUARIOS = 200
 NUM_EVENTOS = 40
 NUM_APOSTAS = 5000
     
 PORCENTAGEM_FRAUDADORES = 0.08
-
-# =========================================================
-# GERAR USUÁRIOS
-# =========================================================
 
 usuarios = []
 
@@ -38,7 +30,6 @@ for i in range(NUM_USUARIOS):
 
     usuarios.append(usuario)
 
-# Escolher fraudadores
 qtd_fraudadores = int(NUM_USUARIOS * PORCENTAGEM_FRAUDADORES)
 
 fraudadores_escolhidos = random.sample(usuarios, qtd_fraudadores)
@@ -48,10 +39,6 @@ for u in fraudadores_escolhidos:
     fraudadores_ids.add(u["user_id"])
 
 usuarios_df = pd.DataFrame(usuarios)
-
-# =========================================================
-# GERAR EVENTOS
-# =========================================================
 
 eventos = []
 
@@ -74,10 +61,6 @@ for i in range(NUM_EVENTOS):
 
 eventos_df = pd.DataFrame(eventos)
 
-# =========================================================
-# GERAR APOSTAS
-# =========================================================
-
 apostas = []
 
 for i in range(NUM_APOSTAS):
@@ -88,10 +71,6 @@ for i in range(NUM_APOSTAS):
     odd_real = evento["odd_mercado"]
 
     fraudador = usuario["fraudador"]
-
-    # =====================================================
-    # SIMULAÇÃO NORMAL
-    # =====================================================
 
     if not fraudador:
 
@@ -107,15 +86,10 @@ for i in range(NUM_APOSTAS):
 
         chance_vitoria = 1 / odd_real
 
-    # =====================================================
-    # SIMULAÇÃO FRAUDULENTA
-    # =====================================================
-
     else:
 
         exploit = random.random()
 
-        # stale odds
         if exploit < 0.7:
 
             odd_pega = round(
@@ -127,7 +101,6 @@ for i in range(NUM_APOSTAS):
 
             chance_vitoria = 0.82
 
-        # odd absurda
         else:
 
             odd_pega = round(
@@ -162,17 +135,9 @@ for i in range(NUM_APOSTAS):
 
 apostas_df = pd.DataFrame(apostas)
 
-# =========================================================
-# FEATURE ENGINEERING
-# =========================================================
-
 apostas_df["odd_ratio"] = (
     apostas_df["odd_pega"] / apostas_df["odd_real"]
 )
-
-# =========================================================
-# DETECTOR DE FRAUDE
-# =========================================================
 
 estatisticas = []
 
@@ -192,33 +157,18 @@ for user_id, grupo in apostas_df.groupby("user_id"):
 
     motivos = []
 
-    # =====================================================
-    # Delay muito baixo
-    # =====================================================
-
     if media_delay < 600:
         score += 30
         motivos.append("latência extremamente baixa")
 
-    # =====================================================
-    # Odds acima do normal
-    # =====================================================
 
     if odd_ratio_media > 1.7:
         score += 35
         motivos.append("captura de odds inconsistentes")
 
-    # =====================================================
-    # Winrate impossível
-    # =====================================================
-
     if winrate > 0.75:
         score += 20
         motivos.append("taxa de vitória anormal")
-
-    # =====================================================
-    # ROI absurdo
-    # =====================================================
 
     if roi > 1.5:
         score += 25
@@ -241,21 +191,11 @@ for user_id, grupo in apostas_df.groupby("user_id"):
 
 estatisticas_df = pd.DataFrame(estatisticas)
 
-# =========================================================
-# ALERTAS
-# =========================================================
-
 alertas = estatisticas_df[
     estatisticas_df["suspeito"] == True
 ]
 
-# =========================================================
-# RESULTADOS
-# =========================================================
-
-print("\n==============================")
 print("RESUMO DA SIMULAÇÃO")
-print("==============================\n")
 
 print(f"Usuários: {NUM_USUARIOS}")
 print(f"Eventos: {NUM_EVENTOS}")
@@ -267,9 +207,6 @@ print(len(fraudadores_ids))
 print("\nUsuários detectados:")
 print(len(alertas))
 
-# =========================================================
-# PRECISÃO
-# =========================================================
 
 verdadeiros_positivos = len(
     alertas[alertas["fraudador_real"] == True]
@@ -279,25 +216,15 @@ falsos_positivos = len(
     alertas[alertas["fraudador_real"] == False]
 )
 
-print("\n==============================")
 print("MÉTRICAS")
-print("==============================\n")
-
 print(f"Verdadeiros positivos: {verdadeiros_positivos}")
 print(f"Falsos positivos: {falsos_positivos}")
 
-# =========================================================
-# MOSTRAR ALERTAS
-# =========================================================
-
-print("\n==============================")
 print("ALERTAS GERADOS")
-print("==============================\n")
 
 for _, row in alertas.head(15).iterrows():
 
     print(f"""
-----------------------------------------
 USUÁRIO: {row['user_id']}
 SCORE: {row['score_risco']}
 WINRATE: {row['winrate']}
@@ -306,12 +233,7 @@ DELAY MÉDIO: {row['media_delay_ms']} ms
 ODD RATIO: {row['odd_ratio_media']}
 MOTIVOS: {", ".join(row['motivos'])}
 FRAUDADOR REAL: {row['fraudador_real']}
-----------------------------------------
 """)
-
-# =========================================================
-# EXPORTAR CSV
-# =========================================================
 
 usuarios_df.to_csv("usuarios.csv", index=False)
 eventos_df.to_csv("eventos.csv", index=False)
